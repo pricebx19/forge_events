@@ -1,88 +1,91 @@
 # Forge Events
 
-[![PyPI version](https://badge.fury.io/py/forge-events.svg)](https://badge.fury.io/py/forge-events)
-[![Build Status](https://github.com/forge-framework/forge_events/actions/workflows/tests.yml/badge.svg)](https://github.com/forge-framework/forge_events/actions)
-[![Coverage](https://codecov.io/gh/forge-framework/forge_events/branch/main/graph/badge.svg)](https://codecov.io/gh/forge-framework/forge_events)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+An event-driven architecture package for the Forge framework.
 
-Event-driven internals Explain the purpose and responsibility of this package within the larger Forge framework.
+## Features
+
+- Event publishing and subscribing
+- Priority-based event handling
+- Asynchronous event processing
+- Integration with the Forge framework
 
 ## Installation
 
 ```bash
-pip install forge-events
-# or with Poetry
-poetry add forge-events
+pip install forge_events
 ```
-
-## Features
-
-- Feature 1: Description
-- Feature 2: Description
-- Feature 3: Description
 
 ## Usage
 
 ```python
-from forge_events import SomeClass
+from forge_events import EventService, EventSubscriber
 
-# Example code
-instance = SomeClass()
-result = instance.do_something()
+# Create an event service
+event_service = EventService()
+
+# Subscribe to an event
+@event_service.subscribe("user.created", priority=10)
+async def handle_user_created(user_data):
+    print(f"User created: {user_data['name']}")
+
+# Publish an event
+await event_service.publish("user.created", {"id": 1, "name": "John Doe"})
 ```
 
-## Architecture
+## Event Subscribers
 
-This package follows the principles of Clean Architecture and Domain-Driven Design:
+Event subscribers are callables that receive event data when an event is published. They are registered with the event service and are invoked when an event is published.
 
-- Domain logic is isolated from infrastructure concerns
-- Interfaces (Protocols) are used for dependency injection
-- Each file contains a single class or function
-- Full type annotations throughout the codebase
+```python
+# Register with a decorator
+@event_service.subscribe("application.starting")
+async def on_app_starting(app):
+    print("Application is starting")
 
-## Development
+# Or register with the subscribe method
+def handle_app_stopping(app):
+    print("Application is stopping")
 
-### Setting up the development environment
+subscriber = event_service.subscribe("application.stopping", handle_app_stopping)
 
-```bash
-# Clone the repository
-git clone https://github.com/forge-framework/forge_events.git
-cd forge_events
-
-# Install dependencies with Poetry
-poetry install
-
-# Activate the virtual environment
-poetry shell
+# Unsubscribe if needed
+event_service.unsubscribe(subscriber)
 ```
 
-### Running tests
+## Priority
 
-```bash
-# Run all tests
-pytest
+Event subscribers can be registered with a priority. Higher priority subscribers are invoked first.
 
-# Run tests with coverage
-pytest --cov=forge_events
+```python
+@event_service.subscribe("user.deleted", priority=100)
+async def high_priority_handler(user_data):
+    print("High priority handler")
 
-# Run specific tests
-pytest tests/test_specific_file.py
+@event_service.subscribe("user.deleted", priority=50)
+async def medium_priority_handler(user_data):
+    print("Medium priority handler")
+
+@event_service.subscribe("user.deleted", priority=10)
+async def low_priority_handler(user_data):
+    print("Low priority handler")
 ```
 
-### Code quality tools
+## Integration with Forge
 
-```bash
-# Format code with Black
-black forge_events tests
+Forge Core automatically integrates with Forge Events when both are installed:
 
-# Check imports with isort
-isort forge_events tests
+```python
+from forge_core import App
 
-# Run linter (Ruff)
-ruff check forge_events tests
+app = App()
 
-# Run type checking with mypy
-mypy forge_events
+@app.on_event("request.received")
+async def log_request(request):
+    print(f"Request received: {request.method} {request.path}")
+
+@app.on_event("request.completed", priority=10)
+async def log_response(data):
+    print(f"Response: {data['response'].status}")
 ```
 
 ## License
